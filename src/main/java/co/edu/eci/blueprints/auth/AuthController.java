@@ -36,7 +36,7 @@ public class AuthController {
         long ttl = props.tokenTtlSeconds() != null ? props.tokenTtlSeconds() : 3600;
         Instant exp = now.plusSeconds(ttl);
 
-        String scope = "blueprints.read blueprints.write";
+        String scope = userService.scopesFor(req.username());
 
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer(props.issuer())

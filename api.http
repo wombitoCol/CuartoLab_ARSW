@@ -1,4 +1,4 @@
-### Login (obtener token)
+### Login como student (scope: solo blueprints.read)
 POST http://localhost:8080/auth/login
 Content-Type: application/json
 
@@ -7,6 +7,43 @@ Content-Type: application/json
   "password": "student123"
 }
 
-### Listar blueprints (usar token)
-GET http://localhost:8080/api/blueprints
+### Login como assistant (scope: blueprints.read + blueprints.write)
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "username": "assistant",
+  "password": "assistant123"
+}
+
+### Listar todos los blueprints (requiere blueprints.read -> funciona con cualquiera de los dos tokens)
+GET http://localhost:8080/api/v1/blueprints
 Authorization: Bearer {{access_token}}
+
+### Consultar blueprints por autor (requiere blueprints.read)
+GET http://localhost:8080/api/v1/blueprints/juan
+Authorization: Bearer {{access_token}}
+
+### Crear un blueprint (requiere blueprints.write)
+# Con el token de "student" debe responder 403 Forbidden.
+# Con el token de "assistant" debe responder 201 Created.
+POST http://localhost:8080/api/v1/blueprints
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "author": "juan",
+  "name": "Nuevo Plano",
+  "points": []
+}
+
+### Agregar un punto a un blueprint existente (requiere blueprints.write)
+# Con el token de "student" debe responder 403 Forbidden.
+PUT http://localhost:8080/api/v1/blueprints/juan/Nuevo%20Plano/points
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "x": 10,
+  "y": 20
+}
