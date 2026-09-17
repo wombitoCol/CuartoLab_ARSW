@@ -1,127 +1,73 @@
 # Escuela Colombiana de Ingeniería Julio Garavito
 ## Arquitectura de Software – ARSW
 ### Laboratorio – Parte 2: BluePrints API con Seguridad JWT (OAuth 2.0)
+## Julio Mayorquin y Diego Patiño
+## Evidencia y respuestas — Actividades 1, 2 y 3
 
-Este laboratorio extiende la **Parte 1** ([Lab_P1_BluePrints_Java21_API](https://github.com/DECSIS-ECI/Lab_P1_BluePrints_Java21_API)) agregando **seguridad a la API** usando **Spring Boot 3, Java 21 y JWT (OAuth 2.0)**.  
-El API se convierte en un **Resource Server** protegido por tokens Bearer firmados con **RS256**.  
-Incluye un endpoint didáctico `/auth/login` que emite el token para facilitar las pruebas.
+### 1. Configuración de seguridad (`SecurityConfig`)
 
----
+`SecurityConfig` define las reglas de autorización en `securityFilterChain` así:
 
-## Objetivos
-- Implementar seguridad en servicios REST usando **OAuth2 Resource Server**.
-- Configurar emisión y validación de **JWT**.
-- Proteger endpoints con **roles y scopes** (`blueprints.read`, `blueprints.write`).
-- Integrar la documentación de seguridad en **Swagger/OpenAPI**.
+| Ruta | Regla | Tipo |
+|---|---|---|
+| `/actuator/health`, `/auth/login` | `permitAll()` | Pública |
+| `/v3/api-docs/**`, `/swagger-ui/**`, `/swagger-ui.html` | `permitAll()` | Pública (documentación) |
+| `/api/**` | `hasAnyAuthority("SCOPE_blueprints.read", "SCOPE_blueprints.write")` | Protegida — exige al menos uno de los dos scopes |
+| Cualquier otra | `authenticated()` | Protegida — exige solo estar autenticado |
 
----
+Además, `oauth2ResourceServer(oauth2 -> oauth2.jwt(...))` habilita el API como *Resource Server*, validando cada `Authorization: Bearer <token>` contra el `JwtDecoder` (llave pública RSA generada en `JwtKeyProvider`). El control fino de *qué* scope exige *cada* endpoint no vive aquí, sino en las anotaciones `@PreAuthorize` de los controllers (ver actividad 3).
 
-## Requisitos
-- JDK 21
-- Maven 3.9+
-- Git
 
----
+### 2. Flujo de login y claims del JWT
 
-## Ejecución del proyecto
-1. Clonar o descomprimir el proyecto:
-   ```bash
-   git clone https://github.com/DECSIS-ECI/Lab_P2_BluePrints_Java21_API_Security_JWT.git
-   cd Lab_P2_BluePrints_Java21_API_Security_JWT
-   ```
-   ó si el profesor entrega el `.zip`, descomprimirlo y entrar en la carpeta.
+`POST /auth/login` valida credenciales contra `InMemoryUserService` (BCrypt) y, si son válidas, emite un JWT firmado con RS256 vía `JwtEncoder`. Las claims emitidas son:
 
-2. Ejecutar con Maven:
-   ```bash
-   mvn -q -DskipTests spring-boot:run
-   ```
+- `iss`: `https://decsis-eci/blueprints`
+- `iat` / `exp`: emisión y expiración (TTL configurable en `application.yml`, 3600s por defecto)
+- `sub`: el username
+- `scope`: string separado por espacios — Spring Security lo traduce automáticamente en authorities con prefijo `SCOPE_`
 
-3. Verificar que la aplicación levante en `http://localhost:8080`.
+Como mejora sobre el enunciado, se diferenciaron los scopes por usuario en `InMemoryUserService.scopesFor(username)`:
+- `student` → `blueprints.read` (solo lectura)
+- `assistant` → `blueprints.read blueprints.write` (lectura y escritura)
 
----
+Esto permite comprobar en la práctica que el scope emitido en el token sí determina qué puede hacer cada usuario, en vez de que todos reciban los mismos permisos.
 
-## Endpoints principales
+**Capturas sugeridas:**
+![alt text](Imagenes/image.png)
 
-### 1. Login (emite token)
-```
-POST http://localhost:8080/auth/login
-Content-Type: application/json
+Respuesta de POST /auth/login con el usuario student: se emite un JWT firmado en RS256, válido por 3600 segundos.
 
-{
-  "username": "student",
-  "password": "student123"
-}
-```
-Respuesta:
-```json
-{
-  "access_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "token_type": "Bearer",
-  "expires_in": 3600
-}
-```
+![alt text](Imagenes/image-1.png)
 
-### 2. Consultar blueprints (requiere scope `blueprints.read`)
-```
-GET http://localhost:8080/api/blueprints
-Authorization: Bearer <ACCESS_TOKEN>
-```
+Respuesta de POST /auth/login con el usuario assistant: se emite un JWT distinto, con permisos diferentes al de student.
 
-### 3. Crear blueprint (requiere scope `blueprints.write`)
-```
-POST http://localhost:8080/api/blueprints
-Authorization: Bearer <ACCESS_TOKEN>
-Content-Type: application/json
+![alt text](Imagenes/image-2.png)
 
-{
-  "name": "Nuevo Plano"
-}
-```
+Payload del token de student decodificado en jwt.io: el claim scope solo contiene blueprints.read.
 
----
+### 3. Extensión de scopes a los endpoints de P1
 
-## Swagger UI
-- URL: [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
-- Pulsa **Authorize**, ingresa el token en el formato:
-  ```
-  Bearer eyJhbGciOi...
-  ```
+Se integró `BlueprintsAPIController` (con su modelo, persistencia Postgres y capa de servicios) traído del laboratorio P1, y se protegió cada endpoint según su naturaleza:
 
----
+| Endpoint | Scope requerido |
+|---|---|
+| `GET /api/v1/blueprints` | `blueprints.read` |
+| `GET /api/v1/blueprints/{author}` | `blueprints.read` |
+| `GET /api/v1/blueprints/{author}/{bpname}` | `blueprints.read` |
+| `POST /api/v1/blueprints` | `blueprints.write` |
+| `PUT /api/v1/blueprints/{author}/{bpname}/points` | `blueprints.write` |
 
-## Estructura del proyecto
-```
-src/main/java/co/edu/eci/blueprints/
-  ├── api/BlueprintController.java       # Endpoints protegidos
-  ├── auth/AuthController.java           # Login didáctico para emitir tokens
-  ├── config/OpenApiConfig.java          # Configuración Swagger + JWT
-  └── security/
-       ├── SecurityConfig.java
-       ├── MethodSecurityConfig.java
-       ├── JwtKeyProvider.java
-       ├── InMemoryUserService.java
-       └── RsaKeyProperties.java
-src/main/resources/
-  └── application.yml
-```
+![alt text](Imagenes/image-3.png)
 
----
+GET /api/v1/blueprints con el token de student responde 200 OK: el scope blueprints.read sí permite consultar.
 
-## Actividades propuestas
-1. Revisar el código de configuración de seguridad (`SecurityConfig`) e identificar cómo se definen los endpoints públicos y protegidos.
-2. Explorar el flujo de login y analizar las claims del JWT emitido.
-3. Extender los scopes (`blueprints.read`, `blueprints.write`) para controlar otros endpoints de la API, del laboratorio P1 trabajado.
-4. Modificar el tiempo de expiración del token y observar el efecto.
-5. Documentar en Swagger los endpoints de autenticación y de negocio.
+![alt text](Imagenes/image-4.png)
 
----
+POST /api/v1/blueprints con el token de student responde 403 Forbidden: sin scope blueprints.write, la escritura queda bloqueada.
 
-## Lecturas recomendadas
-- [Spring Security Reference – OAuth2 Resource Server](https://docs.spring.io/spring-security/reference/servlet/oauth2/resource-server/index.html)
-- [Spring Boot – Securing Web Applications](https://spring.io/guides/gs/securing-web/)
-- [JSON Web Tokens – jwt.io](https://jwt.io/introduction)
+![alt text](Imagenes/image-5.png)
 
----
+POST /api/v1/blueprints con el token de assistant responde 201 Created: con scope blueprints.write, la creación sí se autoriza.
 
-## Licencia
-Proyecto educativo con fines académicos – Escuela Colombiana de Ingeniería Julio Garavito.
+
