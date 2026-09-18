@@ -70,4 +70,20 @@ POST /api/v1/blueprints con el token de student responde 403 Forbidden: sin scop
 
 POST /api/v1/blueprints con el token de assistant responde 201 Created: con scope blueprints.write, la creación sí se autoriza.
 
+### 4. Tiempo de expiracion del token
 
+Se probo el token con un tiempo de expiracion de 30 segundos usando la variable de entorno `BLUEPRINTS_SECURITY_TOKEN_TTL_SECONDS=30`.
+
+Resultado: el token siguio funcionando hasta cerca de 90 segundos. Esto pasa porque Spring da por defecto 60 segundos de margen de reloj al validar la expiracion.
+
+Se agrego la propiedad `blueprints.security.clock-skew-seconds` en `application.yml` (por defecto 60) para poder cambiar ese margen. Con el margen en 0 el token vence justo a los 30 segundos y la API responde 401 con el mensaje `Jwt expired`.
+
+### 5. Documentacion en Swagger
+
+Swagger UI queda en `http://localhost:8080/swagger-ui/index.html`.
+
+Se documento `POST /auth/login` con su descripcion, ejemplos de entrada y las respuestas 200 y 401. Se marco como publico para que no aparezca con candado en Swagger.
+
+En los endpoints de `/api/v1/blueprints` se agrego el scope que pide cada uno y las respuestas 401 (token invalido o vencido) y 403 (el token no tiene el scope necesario).
+
+Para probar en Swagger: hacer login, copiar el `access_token`, darle a Authorize y pegar el token sin la palabra Bearer.

@@ -22,6 +22,7 @@ public class OpenApiConfig {
               .name("bearer-jwt")
               .type(SecurityScheme.Type.HTTP)
               .scheme("bearer")
-              .bearerFormat("JWT")));
+              .bearerFormat("JWT")
+              .description("Obtener el token con POST /auth/login y pegarlo aquí (sin el prefijo 'Bearer').")));
     }
 }

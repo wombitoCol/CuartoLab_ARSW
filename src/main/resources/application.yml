@@ -26,3 +26,4 @@ blueprints:
   security:
     issuer: "https://decsis-eci/blueprints"
     token-ttl-seconds: 3600
+    clock-skew-seconds: 60

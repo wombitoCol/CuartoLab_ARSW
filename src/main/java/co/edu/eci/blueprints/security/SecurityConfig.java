@@ -14,6 +14,8 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+import java.time.Duration;
+
 @Configuration
 @EnableConfigurationProperties(RsaKeyProperties.class)
 public class SecurityConfig {
@@ -38,8 +40,11 @@ public class SecurityConfig {
     }
 
     @Bean
-    public JwtDecoder jwtDecoder(JwtKeyProvider keyProvider) {
-        return NimbusJwtDecoder.withPublicKey((java.security.interfaces.RSAPublicKey) keyProvider.publicKey()).build();
+    public JwtDecoder jwtDecoder(JwtKeyProvider keyProvider, RsaKeyProperties props) {
+        NimbusJwtDecoder decoder = NimbusJwtDecoder.withPublicKey((java.security.interfaces.RSAPublicKey) keyProvider.publicKey()).build();
+        long skew = props.clockSkewSeconds() != null ? props.clockSkewSeconds() : 60;
+        decoder.setJwtValidator(new JwtTimestampValidator(Duration.ofSeconds(skew)));
+        return decoder;
     }
 
     @Bean

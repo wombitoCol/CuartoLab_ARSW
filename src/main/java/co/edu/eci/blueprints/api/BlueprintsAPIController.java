@@ -27,9 +27,11 @@ public class BlueprintsAPIController {
     public BlueprintsAPIController(BlueprintsServices services) { this.services = services; }
 
     // GET /api/v1/blueprints
-    @Operation(summary = "Listar todos los blueprints")
+    @Operation(summary = "Listar todos los blueprints", description = "Requiere scope blueprints.read")
     @ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Consulta exitosa")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Consulta exitosa"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Token ausente, inválido o vencido"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "El token no tiene el scope blueprints.read")
     })
     @GetMapping
     @PreAuthorize("hasAuthority('SCOPE_blueprints.read')")
@@ -38,10 +40,12 @@ public class BlueprintsAPIController {
     }
 
     // GET /api/v1/blueprints/{author}
-    @Operation(summary = "Listar los blueprints de un autor")
+    @Operation(summary = "Listar los blueprints de un autor", description = "Requiere scope blueprints.read")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Consulta exitosa"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "El autor no tiene blueprints")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "El autor no tiene blueprints"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Token ausente, inválido o vencido"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "El token no tiene el scope blueprints.read")
     })
     @GetMapping("/{author}")
     @PreAuthorize("hasAuthority('SCOPE_blueprints.read')")
@@ -54,10 +58,12 @@ public class BlueprintsAPIController {
     }
 
     // GET /api/v1/blueprints/{author}/{bpname}
-    @Operation(summary = "Obtener un blueprint puntual por autor y nombre")
+    @Operation(summary = "Obtener un blueprint puntual por autor y nombre", description = "Requiere scope blueprints.read")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Consulta exitosa"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Blueprint no encontrado")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Blueprint no encontrado"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Token ausente, inválido o vencido"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "El token no tiene el scope blueprints.read")
     })
     @GetMapping("/{author}/{bpname}")
     @PreAuthorize("hasAuthority('SCOPE_blueprints.read')")
@@ -70,10 +76,12 @@ public class BlueprintsAPIController {
     }
 
     // POST /api/v1/blueprints
-    @Operation(summary = "Crear un nuevo blueprint")
+    @Operation(summary = "Crear un nuevo blueprint", description = "Requiere scope blueprints.write")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Blueprint creado"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Datos invalidos o blueprint ya existente")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Datos invalidos o blueprint ya existente"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Token ausente, inválido o vencido"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "El token no tiene el scope blueprints.write")
     })
     @PostMapping
     @PreAuthorize("hasAuthority('SCOPE_blueprints.write')")
@@ -88,10 +96,12 @@ public class BlueprintsAPIController {
     }
 
     // PUT /api/v1/blueprints/{author}/{bpname}/points
-    @Operation(summary = "Agregar un punto a un blueprint existente")
+    @Operation(summary = "Agregar un punto a un blueprint existente", description = "Requiere scope blueprints.write")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "202", description = "Punto agregado"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Blueprint no encontrado")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Blueprint no encontrado"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Token ausente, inválido o vencido"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "El token no tiene el scope blueprints.write")
     })
     @PutMapping("/{author}/{bpname}/points")
     @PreAuthorize("hasAuthority('SCOPE_blueprints.write')")
